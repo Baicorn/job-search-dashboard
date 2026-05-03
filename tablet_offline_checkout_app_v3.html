@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>平板版離線結帳 App</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --ok: #16a34a;
+      --ok-bg: #dcfce7;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      --radius: 20px;
+      --header-h: 70px;
+      --nav-h: 74px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+
+    header {
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #1e40af, #2563eb);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: var(--shadow);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      font-size: 12px;
+      opacity: .9;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 11px 13px;
+      background: white;
+      color: var(--text);
+    }
+
+    button {
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .12s;
+      min-height: 44px;
+    }
+
+    button:active { transform: scale(.98); }
+    button:hover { background: var(--primary-dark); }
+
+    button.secondary {
+      background: #e8eefc;
+      color: #1d4ed8;
+    }
+
+    button.dark {
+      background: #0f172a;
+      color: white;
+    }
+
+    button.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    button.ok {
+      background: var(--ok-bg);
+      color: #15803d;
+    }
+
+    button.ghost {
+      background: rgba(255,255,255,.16);
+      color: white;
+      border: 1px solid rgba(255,255,255,.24);
+    }
+
+    button.small {
+      min-height: 36px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 3px solid rgba(37, 99, 235, .18);
+      border-color: var(--primary);
+    }
+
+    .page {
+      display: none;
+      padding: 16px 16px calc(var(--nav-h) + 18px);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .page.active { display: block; }
+
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(340px, .75fr);
+      gap: 16px;
+      min-height: calc(100vh - var(--header-h) - var(--nav-h) - 32px);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .product-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - var(--header-h) - var(--nav-h) - 32px);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 15px;
+      color: #334155;
+    }
+
+    .toolbar, .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search {
+      width: 100%;
+      font-size: 16px;
+      min-height: 48px;
+    }
+
+    .category-scroll {
+      display: flex;
+      gap: 9px;
+      overflow-x: auto;
+      padding: 2px 0 12px;
+      scrollbar-width: none;
+    }
+
+    .category-scroll::-webkit-scrollbar { display: none; }
+
+    .cat-btn {
+      flex: 0 0 auto;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #dfe5ff;
+      min-height: 46px;
+      padding: 10px 16px;
+    }
+
+    .cat-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .product-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+      gap: 12px;
+      overflow: auto;
+      padding-right: 4px;
+      align-content: start;
+    }
+
+    .product {
+      background: #fbfdff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 105px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: .12s;
+    }
+
+    .product:active {
+      transform: scale(.98);
+      border-color: var(--primary);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, .12);
+    }
+
+    .product-name {
+      font-weight: 900;
+      font-size: 16px;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .product-price {
+      color: var(--primary);
+      font-weight: 950;
+      font-size: 22px;
+      margin-top: 8px;
+    }
+
+    .product-cat {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .cart-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: sticky;
+      top: calc(var(--header-h) + 16px);
+      height: calc(100vh - var(--header-h) - var(--nav-h) - 32px);
+    }
+
+    .cart-items {
+      flex: 1;
+      overflow: auto;
+      min-height: 120px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fbfdff;
+    }
+
+    .cart-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cart-row:last-child { border-bottom: none; }
+
+    .cart-name {
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .cart-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .cart-line {
+      font-weight: 900;
+      font-size: 17px;
+      text-align: right;
+    }
+
+    .qty {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .qty button {
+      width: 38px;
+      height: 38px;
+      min-height: 38px;
+      padding: 0;
+      border-radius: 12px;
+      font-size: 20px;
+    }
+
+    .qty button.remove {
+      width: auto;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .qty span {
+      min-width: 36px;
+      text-align: center;
+      font-weight: 950;
+      font-size: 18px;
+    }
+
+    .money-box {
+      margin-top: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+    }
+
+    .field { flex: 1; min-width: 120px; }
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      margin-bottom: 5px;
+    }
+    .field input, .field select, .field textarea { width: 100%; }
+
+    textarea {
+      min-height: 48px;
+      resize: vertical;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px dashed #d5deeb;
+      gap: 12px;
+    }
+
+    .summary-row:last-child { border-bottom: none; }
+
+    .summary-row .label {
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .summary-row strong {
+      font-size: 20px;
+      font-weight: 950;
+    }
+
+    .total-row strong {
+      font-size: 32px;
+      color: var(--primary);
+    }
+
+    .change {
+      font-size: 26px;
+      font-weight: 950;
+      color: var(--ok);
+    }
+
+    .negative { color: var(--danger); }
+
+    .checkout-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .checkout-actions .complete {
+      grid-column: 1 / -1;
+      min-height: 58px;
+      font-size: 19px;
+      background: var(--ok);
+      color: white;
+    }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: #fafcff;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eef2ff;
+      color: #3730a3;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-h);
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      z-index: 30;
+      box-shadow: 0 -8px 22px rgba(15,23,42,.08);
+    }
+
+    .nav-btn {
+      background: #f1f5f9;
+      color: #334155;
+      border-radius: 18px;
+      font-size: 15px;
+    }
+
+    .nav-btn.active {
+      background: #0f172a;
+      color: white;
+    }
+
+    .history-layout, .settings-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      padding: 10px 9px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f3f6fb;
+      color: #475569;
+      font-weight: 900;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .num { text-align: right; }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 330px);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .tab.active {
+      background: #0f172a;
+      color: white;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 130px auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+      border-radius: 16px;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .success-notice {
+      background: #ecfdf5;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .manage-table input {
+      width: 100%;
+      min-width: 100px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.48);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.active { display: flex; }
+
+    .modal {
+      background: white;
+      width: min(520px, 100%);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(15,23,42,.25);
+      padding: 18px;
+    }
+
+    .cash-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .cash-grid button {
+      background: #eef2ff;
+      color: #3730a3;
+      min-height: 50px;
+      font-size: 16px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (min-width: 981px) {
+      .checkout-layout.compact-cart {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .checkout-layout.compact-cart .cart-panel {
+        position: fixed;
+        right: 18px;
+        bottom: calc(var(--nav-h) + 18px);
+        top: auto;
+        width: 390px;
+        height: min(72vh, 680px);
+        z-index: 15;
+        box-shadow: 0 24px 60px rgba(15,23,42,.18);
+      }
+
+      .checkout-layout.compact-cart .product-panel {
+        padding-right: 410px;
+      }
+
+      .checkout-layout.compact-cart .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .product-panel {
+        min-height: auto;
+      }
+
+      .cart-panel {
+        position: relative;
+        top: auto;
+        height: auto;
+      }
+
+      .product-grid {
+        max-height: none;
+        overflow: visible;
+        grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+      }
+
+      .cart-items {
+        max-height: 320px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      header {
+        height: auto;
+        min-height: var(--header-h);
+        align-items: flex-start;
+      }
+
+      .brand p { display: none; }
+
+      .top-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .top-actions button {
+        min-height: 38px;
+        font-size: 12px;
+        padding: 8px 9px;
+      }
+
+      .page {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .card { padding: 12px; }
+
+      .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .product {
+        min-height: 104px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .checkout-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .cash-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media print {
+      header, .bottom-nav, .no-print, .left-only { display: none !important; }
+      body { background: white; }
+      .page { display: block; padding: 0; }
+      .page:not(#checkoutPage) { display: none; }
+      .checkout-layout { display: block; }
+      .card { box-shadow: none; border: none; }
+      .cart-panel { position: static; height: auto; }
+      .cart-items { max-height: none; overflow: visible; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>平板版離線結帳 App</h1>
+      <p>結帳頁獨立顯示｜商品牆平板優化｜商品設定 CSV 匯入/匯出</p>
+    </div>
+    <div class="top-actions no-print">
+      <button class="ghost" onclick="openPage('checkout')">結帳</button>
+      <button class="ghost" onclick="openPage('history')">銷售紀錄</button>
+      <button class="ghost" onclick="openPage('settings')">商品設定</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="checkoutPage" class="page active">
+      <div id="checkoutLayout" class="checkout-layout compact-cart">
+        <div class="card product-panel left-only">
+          <div class="section-title">
+            <div>
+              <h2>選擇商品</h2>
+              <div class="muted" style="font-size:12px; margin-top:4px;">平板商品牆模式：商品區優先顯示，一次可看到更多商品。</div>
+            </div>
+            <span class="pill" id="productCount">0 項商品</span>
+          </div>
+
+          <div class="row no-print" style="margin-bottom:12px;">
+            <input id="searchInput" class="search" type="text" placeholder="搜尋商品名稱或分類..." style="flex:1; min-width:220px;" />
+            <button class="secondary" onclick="toggleCartMode()">切換訂單欄</button>
+          </div>
+
+          <div class="category-scroll" id="categoryButtons"></div>
+          <div class="product-grid" id="productGrid"></div>
+        </div>
+
+        <div class="card cart-panel">
+          <div class="section-title">
+            <h2>本筆訂單</h2>
+            <div class="row no-print">
+              <button class="secondary small" onclick="printReceipt()">列印</button>
+              <button class="danger small" onclick="clearCart()">清空</button>
+            </div>
+          </div>
+
+          <div class="cart-items" id="cartArea"></div>
+
+          <div class="money-box">
+            <div class="row">
+              <div class="field">
+                <label>折扣類型</label>
+                <select id="discountType" onchange="renderCart()">
+                  <option value="amount">折扣金額</option>
+                  <option value="percent">折扣百分比</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>折扣</label>
+                <input id="discountValue" type="number" min="0" step="1" value="0" inputmode="decimal" oninput="renderCart()" />
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <div class="field">
+                <label>實收金額</label>
+                <input id="cashReceived" type="number" min="0" step="1" value="0" inputmode="decimal" oninput="renderCart()" />
+              </div>
+              <button class="secondary" onclick="openCashModal()" style="align-self:end;">快速收款</button>
+            </div>
+
+            <div class="field" style="margin-top:10px;">
+              <label>訂單備註</label>
+              <textarea id="orderNote" placeholder="例如：外帶、客人姓名、特殊需求"></textarea>
+            </div>
+
+            <div class="summary-row"><span class="label">小計</span><strong id="subtotal">$0</strong></div>
+            <div class="summary-row"><span class="label">折扣</span><strong id="discountAmount">$0</strong></div>
+            <div class="summary-row total-row"><span class="label">應收</span><strong id="totalDue">$0</strong></div>
+            <div class="summary-row"><span class="label">實收</span><strong id="cashShow">$0</strong></div>
+            <div class="summary-row"><span class="label">找零 / 尚缺</span><span class="change" id="changeDue">$0</span></div>
+          </div>
+
+          <div class="checkout-actions no-print">
+            <button class="complete" onclick="completeOrder()">完成並儲存訂單</button>
+            <button class="secondary" onclick="copyReceipt()">複製收據</button>
+            <button class="dark" onclick="openPage('history')">查看銷售紀錄</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="historyPage" class="page">
+      <div class="history-layout">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>銷售紀錄</h2>
+              <div class="muted" style="margin-top:5px;">需要對帳、備份或匯出時再進來。</div>
+            </div>
+            <span class="pill" id="orderCount">0 筆</span>
+          </div>
+
+          <div class="notice">
+            <strong>Google Drive 備份說明：</strong>
+            離線 HTML 不能直接把資料寫入 Google Drive。請在這裡匯出 Excel 或 CSV 後，再手動上傳至你的 Google Drive 資料夾。
+          </div>
+
+          <div class="tabs no-print" style="margin-top:12px;">
+            <button class="tab active" id="tabSummary" onclick="switchHistory('summary')">訂單總表</button>
+            <button class="tab" id="tabDetail" onclick="switchHistory('detail')">商品明細</button>
+          </div>
+
+          <div class="toolbar no-print" style="margin:12px 0;">
+            <button onclick="exportExcel()">匯出 Excel 可開啟檔案 (.xls)</button>
+            <button class="secondary" onclick="exportCSV()">匯出 CSV</button>
+            <button class="danger" onclick="clearHistory()">清除所有紀錄</button>
+          </div>
+
+          <div class="table-wrap" id="historyArea"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="settingsPage" class="page">
+      <div class="settings-layout">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>商品設定</h2>
+              <div class="muted" style="margin-top:5px;">商品設定匯入與匯出已改為 CSV 檔案。</div>
+            </div>
+          </div>
+
+          <div class="notice success-notice">
+            CSV 欄位格式：<strong>商品名稱, 分類, 價格</strong>。可用 Excel 或 Google Sheets 編輯後再匯入。
+          </div>
+
+          <div class="form-grid" style="margin-top:12px;">
+            <div class="field">
+              <label>商品名稱</label>
+              <input id="newName" placeholder="例如：紅茶" />
+            </div>
+            <div class="field">
+              <label>分類</label>
+              <input id="newCategory" placeholder="例如：飲料" />
+            </div>
+            <div class="field">
+              <label>價格</label>
+              <input id="newPrice" type="number" min="0" step="1" placeholder="30" inputmode="decimal" />
+            </div>
+            <button onclick="addProduct()">新增商品</button>
+          </div>
+
+          <h3>目前商品清單</h3>
+          <div class="table-wrap" style="max-height:520px;">
+            <table class="manage-table">
+              <thead>
+                <tr>
+                  <th>商品</th>
+                  <th>分類</th>
+                  <th class="num">價格</th>
+                  <th class="no-print">操作</th>
+                </tr>
+              </thead>
+              <tbody id="productManage"></tbody>
+            </table>
+          </div>
+
+          <div class="toolbar no-print" style="margin-top:14px;">
+            <button class="secondary" onclick="exportProductsCSV()">匯出商品設定 CSV</button>
+            <label class="secondary" style="display:inline-flex; align-items:center; min-height:44px; border-radius:14px; padding:11px 13px; cursor:pointer; color:#1d4ed8; background:#e8eefc; font-weight:800;">
+              匯入商品設定 CSV
+              <input type="file" accept=".csv,text/csv" onchange="importProductsCSV(event)" style="display:none;" />
+            </label>
+            <button class="danger" onclick="resetProducts()">恢復示範商品</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>CSV 匯入格式說明</h2>
+          <div class="notice" style="margin-top:12px;">
+            第一列可以有標題列，也可以沒有。建議使用以下格式：
+            <br><br>
+            商品名稱,分類,價格<br>
+            紅茶,飲料,35<br>
+            拿鐵,飲料,90
+          </div>
+          <h3>匯入規則</h3>
+          <ul>
+            <li>匯入商品設定 CSV 時，會覆蓋目前商品清單。</li>
+            <li>若分類空白，會自動歸類為「未分類」。</li>
+            <li>價格必須是數字，否則該列會被略過。</li>
+            <li>銷售紀錄仍在「銷售紀錄」頁面匯出，不會和商品設定 CSV 混在一起。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav no-print">
+    <button id="navCheckout" class="nav-btn active" onclick="openPage('checkout')">結帳</button>
+    <button id="navHistory" class="nav-btn" onclick="openPage('history')">銷售紀錄</button>
+    <button id="navSettings" class="nav-btn" onclick="openPage('settings')">商品設定</button>
+  </nav>
+
+  <div id="cashModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="section-title">
+        <h2>快速收款</h2>
+        <button class="danger small" onclick="closeCashModal()">關閉</button>
+      </div>
+      <div class="summary-row total-row">
+        <span class="label">應收金額</span>
+        <strong id="modalTotal">$0</strong>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>實收金額</label>
+        <input id="modalCashInput" type="number" min="0" step="1" inputmode="decimal" />
+      </div>
+      <div class="cash-grid">
+        <button onclick="setExactCash()">剛好</button>
+        <button onclick="addCash(100)">+100</button>
+        <button onclick="addCash(500)">+500</button>
+        <button onclick="addCash(1000)">+1000</button>
+        <button onclick="roundCash(10)">進位 10</button>
+        <button onclick="roundCash(100)">進位 100</button>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button style="flex:1;" onclick="applyCash()">套用</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const PRODUCT_KEY = 'tablet_pos_products_v3';
+const OLD_PRODUCT_KEY = 'tablet_pos_products_v2';
+const ORDERS_KEY = 'tablet_pos_orders_v2';
+
+function cryptoId() {
+  return 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+const sampleProducts = [
+  { id: cryptoId(), name: '美式咖啡', category: '飲料', price: 60 },
+  { id: cryptoId(), name: '拿鐵', category: '飲料', price: 90 },
+  { id: cryptoId(), name: '紅茶', category: '飲料', price: 35 },
+  { id: cryptoId(), name: '綠茶', category: '飲料', price: 35 },
+  { id: cryptoId(), name: '雞蛋糕', category: '點心', price: 50 },
+  { id: cryptoId(), name: '鬆餅', category: '點心', price: 80 },
+  { id: cryptoId(), name: '三明治', category: '餐點', price: 75 },
+  { id: cryptoId(), name: '飯糰', category: '餐點', price: 55 },
+  { id: cryptoId(), name: '購物袋', category: '其他', price: 2 }
+];
+
+let products = loadProducts();
+let orders = loadOrders();
+let cart = [];
+let currentCategory = '全部';
+let historyMode = 'summary';
+
+function money(n) {
+  const val = Number(n || 0);
+  return '$' + Math.round(val).toLocaleString('zh-TW');
+}
+
+function nowText() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function dateFileName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function todayCompactDate() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+}
+
+function generateOrderNo() {
+  const today = todayCompactDate();
+  const prefix = `ORD${today}`;
+  const todayOrders = orders
+    .map(o => String(o.orderNo || ''))
+    .filter(no => no.startsWith(prefix));
+
+  let maxSeq = 0;
+  for (const no of todayOrders) {
+    const seqText = no.slice(prefix.length);
+    const seq = Number(seqText);
+    if (!Number.isNaN(seq)) maxSeq = Math.max(maxSeq, seq);
+  }
+
+  const nextSeq = String(maxSeq + 1).padStart(6, '0');
+  return `${prefix}${nextSeq}`;
+}
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, s => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[s]));
+}
+
+function escapeAttr(str) {
+  return String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+}
+
+function loadProducts() {
+  let raw = localStorage.getItem(PRODUCT_KEY);
+  if (!raw) {
+    raw = localStorage.getItem(OLD_PRODUCT_KEY);
+    if (raw) {
+      localStorage.setItem(PRODUCT_KEY, raw);
+    }
+  }
+  if (!raw) {
+    localStorage.setItem(PRODUCT_KEY, JSON.stringify(sampleProducts));
+    return [...sampleProducts];
+  }
+  try { return JSON.parse(raw); } catch { return [...sampleProducts]; }
+}
+
+function saveProducts() {
+  localStorage.setItem(PRODUCT_KEY, JSON.stringify(products));
+}
+
+function loadOrders() {
+  const raw = localStorage.getItem(ORDERS_KEY);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+function saveOrders() {
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+}
+
+function openPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  document.getElementById(page + 'Page').classList.add('active');
+  document.getElementById('nav' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
+
+  if (page === 'history') renderHistory();
+  if (page === 'settings') renderProductManage();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleCartMode() {
+  document.getElementById('checkoutLayout').classList.toggle('compact-cart');
+}
+
+function setCategory(cat) {
+  currentCategory = cat;
+  renderProducts();
+}
+
+function renderProducts() {
+  const q = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+  const cats = ['全部', ...Array.from(new Set(products.map(p => p.category || '未分類'))).sort()];
+  document.getElementById('categoryButtons').innerHTML = cats.map(cat =>
+    `<button class="cat-btn ${cat === currentCategory ? 'active' : ''}" onclick="setCategory('${escapeAttr(cat)}')">${escapeHtml(cat)}</button>`
+  ).join('');
+
+  const filtered = products.filter(p => {
+    const matchCat = currentCategory === '全部' || p.category === currentCategory;
+    const matchQ = !q || p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  document.getElementById('productCount').textContent = `${products.length} 項商品`;
+  document.getElementById('productGrid').innerHTML = filtered.length ? filtered.map(p => `
+    <div class="product" onclick="addToCart('${p.id}')">
+      <div>
+        <div class="product-name">${escapeHtml(p.name)}</div>
+        <div class="product-cat">${escapeHtml(p.category || '未分類')}</div>
+      </div>
+      <div class="product-price">${money(p.price)}</div>
+    </div>
+  `).join('') : `<div class="empty" style="grid-column:1/-1;">找不到符合條件的商品</div>`;
+
+  renderProductManage();
+}
+
+function renderProductManage() {
+  const target = document.getElementById('productManage');
+  if (!target) return;
+
+  const sorted = [...products].sort((a,b) => (a.category || '').localeCompare(b.category || 'zh-Hant') || a.name.localeCompare(b.name || 'zh-Hant'));
+  target.innerHTML = sorted.map(p => `
+    <tr>
+      <td><input value="${escapeHtml(p.name)}" onchange="editProduct('${p.id}', 'name', this.value)" /></td>
+      <td><input value="${escapeHtml(p.category || '')}" onchange="editProduct('${p.id}', 'category', this.value)" /></td>
+      <td class="num"><input type="number" min="0" step="1" value="${Number(p.price)}" onchange="editProduct('${p.id}', 'price', this.value)" /></td>
+      <td class="no-print"><button class="danger small" onclick="deleteProduct('${p.id}')">刪除</button></td>
+    </tr>
+  `).join('');
+}
+
+function addProduct() {
+  const name = document.getElementById('newName').value.trim();
+  const category = document.getElementById('newCategory').value.trim() || '未分類';
+  const price = Number(document.getElementById('newPrice').value);
+
+  if (!name) return alert('請輸入商品名稱');
+  if (Number.isNaN(price) || price < 0) return alert('請輸入正確價格');
+
+  products.push({ id: cryptoId(), name, category, price });
+  saveProducts();
+
+  document.getElementById('newName').value = '';
+  document.getElementById('newCategory').value = '';
+  document.getElementById('newPrice').value = '';
+
+  currentCategory = category;
+  renderProducts();
+  renderProductManage();
+  alert('已新增商品');
+}
+
+function editProduct(id, field, value) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+
+  if (field === 'price') {
+    const n = Number(value);
+    if (Number.isNaN(n) || n < 0) return alert('價格不可為負數');
+    p.price = n;
+  } else {
+    p[field] = String(value).trim() || (field === 'category' ? '未分類' : p[field]);
+  }
+
+  saveProducts();
+
+  cart.forEach(item => {
+    if (item.productId === id) {
+      item.name = p.name;
+      item.category = p.category;
+      item.unitPrice = Number(p.price);
+    }
+  });
+
+  renderProducts();
+  renderCart();
+}
+
+function deleteProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`確定刪除「${p.name}」？`)) return;
+
+  products = products.filter(x => x.id !== id);
+  cart = cart.filter(x => x.productId !== id);
+  saveProducts();
+
+  renderProducts();
+  renderCart();
+}
+
+function resetProducts() {
+  if (!confirm('確定恢復示範商品？目前商品設定會被覆蓋。')) return;
+  products = sampleProducts.map(p => ({ ...p, id: cryptoId() }));
+  saveProducts();
+  currentCategory = '全部';
+  renderProducts();
+  renderProductManage();
+}
+
+function addToCart(productId) {
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+
+  const item = cart.find(x => x.productId === productId);
+  if (item) item.qty += 1;
+  else cart.push({ productId, name: p.name, category: p.category, unitPrice: Number(p.price), qty: 1 });
+
+  renderCart();
+}
+
+function adjustQty(productId, delta) {
+  const item = cart.find(x => x.productId === productId);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(x => x.productId !== productId);
+  renderCart();
+}
+
+function removeCartItem(productId) {
+  cart = cart.filter(x => x.productId !== productId);
+  renderCart();
+}
+
+function calcOrder() {
+  const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  const type = document.getElementById('discountType').value;
+  const rawDiscount = Math.max(0, Number(document.getElementById('discountValue').value || 0));
+  let discount = type === 'percent' ? subtotal * Math.min(rawDiscount, 100) / 100 : rawDiscount;
+  discount = Math.min(discount, subtotal);
+
+  const total = Math.max(0, subtotal - discount);
+  const cash = Math.max(0, Number(document.getElementById('cashReceived').value || 0));
+  const change = cash - total;
+
+  return { subtotal, discount, total, cash, change };
+}
+
+function renderCart() {
+  const area = document.getElementById('cartArea');
+
+  if (!cart.length) {
+    area.innerHTML = `<div class="empty">尚未加入商品。請從左側商品區點選。</div>`;
+  } else {
+    area.innerHTML = cart.map(i => `
+      <div class="cart-row">
+        <div>
+          <div class="cart-name">${escapeHtml(i.name)}</div>
+          <div class="cart-meta">${escapeHtml(i.category || '')}｜單價 ${money(i.unitPrice)}</div>
+          <div class="qty no-print">
+            <button class="secondary" onclick="adjustQty('${i.productId}', -1)">−</button>
+            <span>${i.qty}</span>
+            <button class="secondary" onclick="adjustQty('${i.productId}', 1)">＋</button>
+            <button class="danger remove" onclick="removeCartItem('${i.productId}')">移除</button>
+          </div>
+        </div>
+        <div class="cart-line">${money(i.unitPrice * i.qty)}</div>
+      </div>
+    `).join('');
+  }
+
+  const { subtotal, discount, total, cash, change } = calcOrder();
+
+  document.getElementById('subtotal').textContent = money(subtotal);
+  document.getElementById('discountAmount').textContent = money(discount);
+  document.getElementById('totalDue').textContent = money(total);
+  document.getElementById('cashShow').textContent = money(cash);
+
+  const changeEl = document.getElementById('changeDue');
+  changeEl.textContent = money(Math.abs(change));
+  changeEl.className = 'change' + (change < 0 ? ' negative' : '');
+}
+
+function clearCart() {
+  if (cart.length && !confirm('確定清空本筆訂單？')) return;
+  cart = [];
+  document.getElementById('discountType').value = 'amount';
+  document.getElementById('discountValue').value = 0;
+  document.getElementById('cashReceived').value = 0;
+  document.getElementById('orderNote').value = '';
+  renderCart();
+}
+
+function completeOrder() {
+  if (!cart.length) return alert('請先加入商品');
+
+  const cal = calcOrder();
+  if (cal.cash < cal.total && !confirm('實收金額少於應收金額，仍要儲存嗎？')) return;
+
+  const orderNo = generateOrderNo();
+  const order = {
+    orderNo,
+    createdAt: nowText(),
+    items: cart.map(i => ({...i, lineTotal: Math.round(i.unitPrice * i.qty)})),
+    subtotal: Math.round(cal.subtotal),
+    discountType: document.getElementById('discountType').value,
+    discountValue: Number(document.getElementById('discountValue').value || 0),
+    discountAmount: Math.round(cal.discount),
+    total: Math.round(cal.total),
+    cashReceived: Math.round(cal.cash),
+    change: Math.round(cal.change),
+    note: document.getElementById('orderNote').value.trim()
+  };
+
+  orders.unshift(order);
+  saveOrders();
+
+  clearCart();
+  renderHistory();
+  alert(`已儲存訂單：${orderNo}`);
+}
+
+function switchHistory(mode) {
+  historyMode = mode;
+  document.getElementById('tabSummary').classList.toggle('active', mode === 'summary');
+  document.getElementById('tabDetail').classList.toggle('active', mode === 'detail');
+  renderHistory();
+}
+
+function renderHistory() {
+  document.getElementById('orderCount').textContent = `${orders.length} 筆`;
+  const area = document.getElementById('historyArea');
+
+  if (!orders.length) {
+    area.innerHTML = `<div class="empty">目前沒有銷售紀錄</div>`;
+    return;
+  }
+
+  if (historyMode === 'summary') {
+    area.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>時間</th><th>訂單編號</th><th class="num">小計</th><th class="num">折扣</th>
+            <th class="num">應收</th><th class="num">實收</th><th class="num">找零</th><th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(o => `
+            <tr>
+              <td>${escapeHtml(o.createdAt)}</td>
+              <td>${escapeHtml(o.orderNo)}</td>
+              <td class="num">${money(o.subtotal)}</td>
+              <td class="num">${money(o.discountAmount)}</td>
+              <td class="num">${money(o.total)}</td>
+              <td class="num">${money(o.cashReceived)}</td>
+              <td class="num">${money(o.change)}</td>
+              <td>${escapeHtml(o.note || '')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    const rows = orders.flatMap(o => o.items.map(i => ({...i, orderNo: o.orderNo, createdAt: o.createdAt, note: o.note, orderTotal: o.total})));
+    area.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>時間</th><th>訂單編號</th><th>分類</th><th>商品</th>
+            <th class="num">單價</th><th class="num">數量</th><th class="num">小計</th><th class="num">訂單應收</th><th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${escapeHtml(r.createdAt)}</td>
+              <td>${escapeHtml(r.orderNo)}</td>
+              <td>${escapeHtml(r.category || '')}</td>
+              <td>${escapeHtml(r.name)}</td>
+              <td class="num">${money(r.unitPrice)}</td>
+              <td class="num">${r.qty}</td>
+              <td class="num">${money(r.lineTotal)}</td>
+              <td class="num">${money(r.orderTotal)}</td>
+              <td>${escapeHtml(r.note || '')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+}
+
+function clearHistory() {
+  if (!orders.length) return alert('目前沒有銷售紀錄');
+  if (!confirm('確定清除所有銷售紀錄？此動作無法復原。')) return;
+  orders = [];
+  saveOrders();
+  renderHistory();
+}
+
+function getExportRows() {
+  const summary = orders.map(o => ({
+    '時間': o.createdAt,
+    '訂單編號': o.orderNo,
+    '小計': o.subtotal,
+    '折扣類型': o.discountType === 'percent' ? '百分比' : '金額',
+    '折扣輸入值': o.discountValue,
+    '折扣金額': o.discountAmount,
+    '應收': o.total,
+    '實收': o.cashReceived,
+    '找零': o.change,
+    '備註': o.note || ''
+  }));
+
+  const detail = orders.flatMap(o => o.items.map(i => ({
+    '時間': o.createdAt,
+    '訂單編號': o.orderNo,
+    '分類': i.category || '',
+    '商品': i.name,
+    '單價': i.unitPrice,
+    '數量': i.qty,
+    '商品小計': i.lineTotal,
+    '訂單應收': o.total,
+    '訂單備註': o.note || ''
+  })));
+
+  return { summary, detail };
+}
+
+function exportCSV() {
+  if (!orders.length) return alert('目前沒有可匯出的銷售紀錄');
+  const { summary, detail } = getExportRows();
+  downloadText(toCSV(summary), `訂單總表_${dateFileName()}.csv`, 'text/csv;charset=utf-8;');
+  setTimeout(() => downloadText(toCSV(detail), `商品明細_${dateFileName()}.csv`, 'text/csv;charset=utf-8;'), 250);
+}
+
+function exportExcel() {
+  if (!orders.length) return alert('目前沒有可匯出的銷售紀錄');
+  const { summary, detail } = getExportRows();
+
+  const workbook = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:x="urn:schemas-microsoft-com:office:excel"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+      <x:ExcelWorksheet><x:Name>訂單總表</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
+      <x:ExcelWorksheet><x:Name>商品明細</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
+      </x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    </head>
+    <body>
+      <h2>訂單總表</h2>
+      ${rowsToTable(summary)}
+      <br><br>
+      <h2>商品明細</h2>
+      ${rowsToTable(detail)}
+    </body></html>`;
+
+  downloadText(workbook, `銷售紀錄_${dateFileName()}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
+}
+
+function exportProductsCSV() {
+  const rows = products.map(p => ({
+    '商品名稱': p.name,
+    '分類': p.category || '未分類',
+    '價格': Number(p.price || 0)
+  }));
+  downloadText(toCSV(rows), `商品設定_${dateFileName()}.csv`, 'text/csv;charset=utf-8;');
+}
+
+function importProductsCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result;
+      const rows = parseCSV(text).filter(row => row.some(cell => String(cell).trim() !== ''));
+      if (!rows.length) return alert('CSV 內容是空的');
+
+      let startIndex = 0;
+      const first = rows[0].map(x => String(x).trim().toLowerCase());
+      const hasHeader =
+        first.includes('商品名稱') || first.includes('商品') || first.includes('name') ||
+        first.includes('分類') || first.includes('category') ||
+        first.includes('價格') || first.includes('price');
+
+      let nameIdx = 0, catIdx = 1, priceIdx = 2;
+
+      if (hasHeader) {
+        startIndex = 1;
+        nameIdx = findHeaderIndex(first, ['商品名稱', '商品', 'name', 'product', 'product name']);
+        catIdx = findHeaderIndex(first, ['分類', 'category', '類別']);
+        priceIdx = findHeaderIndex(first, ['價格', 'price', '售價']);
+        if (nameIdx < 0) nameIdx = 0;
+        if (catIdx < 0) catIdx = 1;
+        if (priceIdx < 0) priceIdx = 2;
+      }
+
+      const imported = [];
+      for (let i = startIndex; i < rows.length; i++) {
+        const row = rows[i];
+        const name = String(row[nameIdx] ?? '').trim();
+        const category = String(row[catIdx] ?? '未分類').trim() || '未分類';
+        const price = Number(String(row[priceIdx] ?? '').replace(/[$,\s]/g, ''));
+
+        if (!name) continue;
+        if (Number.isNaN(price) || price < 0) continue;
+
+        imported.push({ id: cryptoId(), name, category, price });
+      }
+
+      if (!imported.length) {
+        alert('沒有成功匯入任何商品。請確認 CSV 欄位是否為：商品名稱,分類,價格');
+        return;
+      }
+
+      if (!confirm(`將匯入 ${imported.length} 項商品，並覆蓋目前商品清單。確定繼續？`)) return;
+
+      products = imported;
+      cart = [];
+      saveProducts();
+      currentCategory = '全部';
+
+      renderProducts();
+      renderCart();
+      renderProductManage();
+      alert(`已匯入 ${imported.length} 項商品`);
+    } catch (err) {
+      alert('匯入失敗，請確認檔案是否為 CSV 格式。');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  reader.readAsText(file, 'utf-8');
+}
+
+function findHeaderIndex(headers, candidates) {
+  return headers.findIndex(h => candidates.map(c => c.toLowerCase()).includes(h));
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  text = String(text || '').replace(/^\uFEFF/, '');
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      row.push(cell);
+      cell = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
+function rowsToTable(rows) {
+  if (!rows.length) return '<table></table>';
+  const keys = Object.keys(rows[0]);
+  return `<table border="1"><thead><tr>${keys.map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(r => `<tr>${keys.map(k => `<td>${escapeHtml(r[k])}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
+}
+
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const keys = Object.keys(rows[0]);
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return '\uFEFF' + keys.join(',') + '\n' + rows.map(r => keys.map(k => esc(r[k])).join(',')).join('\n');
+}
+
+function downloadText(text, filename, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function printReceipt() {
+  window.print();
+}
+
+function receiptText() {
+  const cal = calcOrder();
+  const lines = [];
+  lines.push('【結帳收據】');
+  lines.push(nowText());
+  lines.push('-------------------------');
+  cart.forEach(i => lines.push(`${i.name} x${i.qty} @${i.unitPrice} = ${i.unitPrice * i.qty}`));
+  lines.push('-------------------------');
+  lines.push(`小計：${Math.round(cal.subtotal)}`);
+  lines.push(`折扣：${Math.round(cal.discount)}`);
+  lines.push(`應收：${Math.round(cal.total)}`);
+  lines.push(`實收：${Math.round(cal.cash)}`);
+  lines.push(`${cal.change >= 0 ? '找零' : '尚缺'}：${Math.abs(Math.round(cal.change))}`);
+  const note = document.getElementById('orderNote').value.trim();
+  if (note) lines.push(`備註：${note}`);
+  return lines.join('\n');
+}
+
+async function copyReceipt() {
+  if (!cart.length) return alert('目前沒有商品可複製');
+  try {
+    await navigator.clipboard.writeText(receiptText());
+    alert('已複製收據文字');
+  } catch {
+    alert(receiptText());
+  }
+}
+
+function openCashModal() {
+  const cal = calcOrder();
+  document.getElementById('modalTotal').textContent = money(cal.total);
+  document.getElementById('modalCashInput').value = cal.cash || cal.total || 0;
+  document.getElementById('cashModal').classList.add('active');
+}
+
+function closeCashModal() {
+  document.getElementById('cashModal').classList.remove('active');
+}
+
+function setExactCash() {
+  const cal = calcOrder();
+  document.getElementById('modalCashInput').value = Math.round(cal.total);
+}
+
+function addCash(amount) {
+  const input = document.getElementById('modalCashInput');
+  input.value = Math.max(0, Number(input.value || 0) + amount);
+}
+
+function roundCash(unit) {
+  const cal = calcOrder();
+  const rounded = Math.ceil(cal.total / unit) * unit;
+  document.getElementById('modalCashInput').value = rounded;
+}
+
+function applyCash() {
+  const value = Math.max(0, Number(document.getElementById('modalCashInput').value || 0));
+  document.getElementById('cashReceived').value = value;
+  closeCashModal();
+  renderCart();
+}
+
+document.getElementById('searchInput').addEventListener('input', renderProducts);
+
+renderProducts();
+renderCart();
+renderHistory();
+</script>
+</body>
+</html>
